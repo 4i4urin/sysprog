@@ -1,6 +1,34 @@
 #!/bin/bash
 
-find_res=$(find . -name $1)
+# Check if arguments are not empty
+if [ $# -eq 0 ]; then
+    echo "Missing arguments"
+    echo "Requireв -f [config_file_name]"
+    exit 0
+fi
+
+
+# Parse options using getopts
+while getopts ":f:" OPTION; do
+    case $OPTION in
+        f)
+            config_path=$OPTARG
+            ;;
+        \?)
+            echo "Invalid option: -$OPTARG"
+            exit 0
+            ;;
+        :)
+            echo "Option -$OPTARG requires an argument"
+            exit 0
+            ;;
+    esac
+done
+
+shift $((OPTIND-1)) # Shift script arguments
+
+
+find_res=$(find . -name $config_path)
 
 if [[ ! -e $find_res ]]; then
 	echo "No such file"
