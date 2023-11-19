@@ -1,31 +1,29 @@
 #include <stdio.h>
-#include <string.h>
 #include <stdlib.h>
-#include <ctype.h>
+#include <string.h>
 
 #include "stack.h"
+#include "stack_consol_io.h"
 
 
 char usage_stack(t_module_stack* ptr_stack);
+void copy_employee(void* dest, const void* const src);
+void delete_emloyee(void* emp);
 
 int main(void)
 {
-    t_module_stack stack = init_stack();
+    t_module_stack stack = init_stack(copy_employee, delete_emloyee);
 
     char quit_flag = 0;
     while ( !quit_flag )
     {
         quit_flag = usage_stack(&stack);
     }
-
+    return 0;
 }
 
 
-char get_char(void);
-t_employee* get_user_employee(t_employee* emp);
-void show_employee(t_employee* ptr_item);
-void show_all(t_module_stack* ptr_stack);
-void show_menu(void);
+void clear(const void* const ptrv_self);
 
 char usage_stack(t_module_stack* ptr_stack)
 {
@@ -63,12 +61,12 @@ char usage_stack(t_module_stack* ptr_stack)
         break;
 
     case 'c': // clear stack
-        ptr_stack->clear(ptr_stack);
+        clear(ptr_stack);
         printf("The Stack is clear\n");
         break;
 
     case 'q': // clear stack and quit from program
-        ptr_stack->clear(ptr_stack);
+        clear(ptr_stack);
         quit_flag = 1;
         printf("Bye\n");
         break;
@@ -93,100 +91,35 @@ void show_all(t_module_stack* ptr_stack)
 }
 
 
-char get_char(void)
+void clear(const void* const ptrv_self)
 {
-    char command = getchar();
-    if (command == '\n') 
-        return 0;
+    t_module_stack* self = (t_module_stack*) ptrv_self;
+    t_employee tmp = { (char*) malloc(1), 0, 0};
+    // hack to use realloc() in copy_employee()
 
-    while ( getchar() != '\n' ) { } // read everything till \n
-    return tolower(command);
+    while ( self->pop(&tmp, self) != NULL) { }
 }
 
 
-void show_employee(t_employee* ptr_item)
+void copy_employee(void* ptrv_dest, const void* const ptrv_src)
 {
-    putchar('\n');
-    printf("Name: %s\n", ptr_item->name);
-    printf("Status: ");
-    (ptr_item->is_married) ? printf("married\n") : printf("single\n");
-    printf("Salary: %.2lf$\n", ptr_item->salary);
-    putchar('\n');
+    t_employee* dest = (t_employee*)ptrv_dest;
+    t_employee* src = (t_employee*)ptrv_src;
+
+    dest->name = (char*) realloc(dest->name, sizeof(char) * strlen(src->name));
+    memcpy(dest->name, src->name, strlen(src->name));
+    dest->is_married = src->is_married;
+    dest->salary = src->salary;
 }
 
 
-char* get_dynamic_string(char* ret);
-char get_married_status(void);
-
-t_employee* get_user_employee(t_employee* emp)
+void delete_emloyee(void* ptrv_emp)
 {
-    printf("Enter employee name: ");
-    emp->name = get_dynamic_string(emp->name);
-    if (emp->name == NULL)
-    {
-        printf("Error input\n");
-        return NULL;
-    }
+    t_employee* emp = (t_employee*) ptrv_emp;
 
-    printf("Is the employee married?(y/n) ");
-    emp->is_married = get_married_status();
+    memset(emp->name, 0, strlen(emp->name));
+    free(emp->name);
 
-    printf("Enter employee salary: ");
-    if (scanf("%lf", &emp->salary) != 1)
-    {
-        printf("Invalid number\n");
-        return 0;
-    }
-
-    getchar();
-    return emp;
-}
-
-
-char get_married_status(void)
-{
-    char status = get_char();
-    if (tolower(status) == 'y')
-        return 1;
-    else 
-        return 0;
-}
-
-
-char* get_dynamic_string(char* ret)
-{
-    // I don't know. Do i need to free memory if it maybe allocate before
-    free(ret); // clear memory
-
-    char ch = 0;
-    int char_counter = 0;
-    ret = (char*) malloc(sizeof(char));
-
-    while ( (ch = getchar()) != '\n' && ch != EOF)
-    {
-        ret[ char_counter ] = ch;
-        char_counter += 1;
-
-        ret = (char*) realloc(ret, (char_counter  + 1) * sizeof(char));
-    }
-
-    if (char_counter == 0)
-        return NULL;
-
-    ret[ char_counter ] = '\0';
-
-    return ret;
-}
-
-
-void show_menu(void)
-{
-    printf("Menu of stack options:\n");
-    printf("a - add item to the stack\n");
-    printf("p - pop item from the stack\n");
-    printf("l - list all item of the stack (stack will be empty)\n");
-    printf("n - show number of items in the stack (size of the stack will not change\n");
-    printf("c - clear stack\n");
-    printf("q - quit from program\n");
-    printf("Print your command: ");
+    emp->is_married = 0;
+    emp->salary = 0;
 }
