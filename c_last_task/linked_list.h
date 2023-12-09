@@ -23,13 +23,13 @@ typedef struct _t_employee
 typedef struct _t_list_item
 {
     t_employee data;
-    void* next;a
+    void* next;
     void* prev;
 } t_list_item;
 
 
-typedef void (*const t_push_func)(const t_employee* const ptr_item, const void* const ptrv_self);
-typedef t_employee* (*const t_pop_func)(t_employee* const ret_item, const void* const ptrv_self);
+typedef void (*const t_push_func)(const t_employee* const ptr_item, te_list_direction e_dir, const void* const ptrv_self);
+typedef t_employee* (*const t_pop_func)(t_employee* const ret_item, te_list_direction e_dir, const void* const ptrv_self);
 typedef int (*const t_size_func)(const void* const ptrv_self);
 typedef t_employee* (*const t_take_func)(t_employee* const ret_item, const unsigned int id, const void* const ptrv_self);
 
@@ -39,12 +39,8 @@ typedef void (*const t_delete_item)(void* item);
 
 typedef struct _t_module_list
 {
-    t_push_func push_tail;
-    t_push_func push_head;
-
-    t_pop_func pop_tail;
-    t_pop_func pop_head;
-
+    t_push_func push;
+    t_pop_func pop;
     t_size_func size;
 
     t_copy_item copy_item;

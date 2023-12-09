@@ -20,7 +20,6 @@ int main(void)
     {
         quit_flag = usage_list(&list);
     }
-
     return 0;
 }
 
@@ -39,22 +38,22 @@ char usage_list(t_module_list* ptr_list)
     t_employee tmp = {0, 0, (char*) malloc(1), 0, 0, 0};
     switch (command)
     {
-    case 'a': // get user input and push
+    case 'a': // get user input and push HEAD
         if(get_user_employee(&tmp) == NULL)
             break;
-        ptr_list->push_head(&tmp, ptr_list);
+        ptr_list->push(&tmp, E_HEAD, ptr_list);
         printf("Push first item to the list\n");
         break;
 
-    case 'A': // get user input and push
+    case 'A': // get user input and push TAIL
         if(get_user_employee(&tmp) == NULL)
             break;
-        ptr_list->push_tail(&tmp, ptr_list);
+        ptr_list->push(&tmp, E_TAIL, ptr_list);
         printf("Push last item to the list\n");
         break;
 
-    case 'p': // pop one item
-        if (ptr_list->pop_head(&tmp, ptr_list) == NULL)
+    case 'p': // pop one item HEAD
+        if (ptr_list->pop(&tmp, E_HEAD, ptr_list) == NULL)
         {
             printf("ERROR: the list is empty\n");
             break;
@@ -62,8 +61,8 @@ char usage_list(t_module_list* ptr_list)
         show_employee(&tmp);
         break;
 
-    case 'P': // pop one item
-        if (ptr_list->pop_tail(&tmp, ptr_list) == NULL)
+    case 'P': // pop one item TAIL
+        if (ptr_list->pop(&tmp, E_TAIL, ptr_list) == NULL)
         {
             printf("ERROR: the list is empty\n");
             break;
@@ -113,7 +112,7 @@ void show_all(t_module_list* ptr_llist)
 {
     t_employee tmp = { 0, 0, (char*) malloc(1), 0, 0, 0}; // hack to use realloc() in pop
 
-    while (ptr_llist->pop_head(&tmp, ptr_llist) != NULL)
+    while (ptr_llist->pop(&tmp, E_HEAD, ptr_llist) != NULL)
     {
         show_employee(&tmp);
     }
@@ -126,7 +125,7 @@ void clear(const void* const ptrv_self)
     t_employee tmp = { 0, 0, (char*) malloc(1), 0, 0, 0};
     // hack to use realloc() in copy_employee()
 
-    while ( self->pop_head(&tmp, self) != NULL) { }
+    while ( self->pop(&tmp, E_HEAD, self) != NULL) { }
 }
 
 
