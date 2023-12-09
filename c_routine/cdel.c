@@ -113,16 +113,15 @@ char* get_absolut_path(char* path_str, char* current_dir, const char* user_input
         path_str = (char*)realloc(path_str, strlen(current_dir) + strlen(user_input) - 2);
         memcpy(path_str, current_dir, strlen(current_dir)); // /home/shishel/ without "\0"
         memcpy(path_str + strlen(current_dir), user_input + 1, strlen(user_input));
-    } else if (isalpha(user_input[0]))
+    } else if ( isalpha(user_input[0]) || (user_input[0] == '.' && user_input[1] == '.') )
     {// from curretn dir
         path_str = (char*)realloc(path_str, strlen(current_dir) + strlen(user_input) + 1);
         memcpy(path_str, current_dir, strlen(current_dir)); // /home/shishel/ without "\0"
         path_str[strlen(current_dir)] = '/';
         memcpy(path_str + strlen(current_dir) + 1, user_input, strlen(user_input));
         path_str[strlen(current_dir) + strlen(user_input) + 1] = '\0';
-    } else
+    } else 
         return NULL;
-
     return path_str;
 }
 

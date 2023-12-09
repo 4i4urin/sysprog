@@ -13,7 +13,15 @@ char get_char(void)
     if (command == '\n') 
         return 0;
 
-    while ( getchar() != '\n' ) { } // read everything till \n
+    char ch = 0;
+    while ( (ch = getchar()) != '\n' ) // read everything till \n
+    {
+        if (ch == EOF)
+        {
+            clearerr(stdin);
+            break;
+        }
+    }
     return tolower(command);
 }
 
@@ -49,10 +57,18 @@ t_employee* get_user_employee(t_employee* emp)
     if (scanf("%lf", &emp->salary) != 1)
     {
         printf("Invalid number\n");
-        return 0;
+        emp = NULL;
+    }
+    char ch = 0;
+    while ((ch = getchar()) != '\n') 
+    {
+        if (ch == EOF)
+        {
+            clearerr(stdin);
+            break;
+        }
     }
 
-    getchar();
     return emp;
 }
 
@@ -75,13 +91,23 @@ static char* get_dynamic_string(char* ret)
     char ch = 0;
     int char_counter = 0;
     ret = (char*) malloc(sizeof(char));
+    if (ret == NULL)
+        return NULL;
 
-    while ( (ch = getchar()) != '\n' && ch != EOF)
+    while ( (ch = getchar()) != '\n' )
     {
+        if (ch == EOF)
+        {
+            clearerr(stdin);
+            return NULL;
+        }
+
         ret[ char_counter ] = ch;
         char_counter += 1;
 
         ret = (char*) realloc(ret, (char_counter  + 1) * sizeof(char));
+        if (ret == NULL)
+            return NULL;
     }
 
     if (char_counter == 0)
