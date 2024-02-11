@@ -27,7 +27,7 @@ int main(int argc, char const *argv[])
     }
 
     int pid = uint_from_str(argv[1]);
-    if ( !pid )
+    if ( pid <= 0)
     {
         printf("ERROR: Unexpected PID\n");
         return -1;
