@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
-
+#include <stdlib.h>
 
 #define READ  0
 #define WRITE 1
@@ -13,6 +13,8 @@ void child_proc(int write_desc, int read_desc);
 
 void write_to_pipe(int pipe_desc, const char* str);
 void read_from_pipe(int pipe_desc, char* read_buf, int read_buf_len);
+
+char* get_dynamic_string(char* ret);
 /*
 The machines rose from the ashes of the nuclear fire. 
 Their war to exterminate mankind has raged for decades, but the final battle would not be fought in the future. 
@@ -57,38 +59,41 @@ int main(void)
 
 void parent_proc(int write_desc, int read_desc)
 {
-    char phrase[][BUF_LEN] = { 
-        "The machines rose from the ashes of the nuclear fire.",
-        "It would be fought here, in our present."
-    };
-
+    char* user_input = NULL;
     char read_buf[BUF_LEN] = { 0 };
-    write_to_pipe(write_desc, phrase[0]);
-    read_from_pipe(read_desc, read_buf, BUF_LEN);
-    printf("PARENT READ: %s\n", read_buf);
+    while (1)
+    {
+        printf("PARENT WRITE: ");
+        user_input = get_dynamic_string(user_input);
+        if (user_input != NULL)
+            write_to_pipe(write_desc, user_input);
+        else 
+            write_to_pipe(write_desc, " ");
+        free(user_input);
 
-    write_to_pipe(write_desc, phrase[1]);
-    read_from_pipe(read_desc, read_buf, BUF_LEN);
-    printf("PARENT READ: %s\n", read_buf);
+        read_from_pipe(read_desc, read_buf, BUF_LEN);
+        printf("PARENT READ: %s\n\n", read_buf);
+    }
 }
 
 
 void child_proc(int write_desc, int read_desc)
 {
-    char phrase[][BUF_LEN] = 
-    {
-        "Their war to exterminate mankind has raged for decades, but the final battle would not be fought in the future.",
-        "Tonight."
-    };
+    char* user_input = NULL;
     char read_buf[BUF_LEN] = { 0 };
-
-    read_from_pipe(read_desc, read_buf, BUF_LEN);
-    printf("CHILD READ: %s\n", read_buf);
-    write_to_pipe(write_desc, phrase[0]);
-
-    read_from_pipe(read_desc, read_buf, BUF_LEN);
-    printf("CHILD READ: %s\n", read_buf);
-    write_to_pipe(write_desc, phrase[1]);
+    while (1)
+    {
+        read_from_pipe(read_desc, read_buf, BUF_LEN);
+        printf("CHILD READ: %s\n\n", read_buf);
+        
+        printf("CHILD WRITE: ");
+        user_input = get_dynamic_string(user_input);
+        if (user_input != NULL)
+            write_to_pipe(write_desc, user_input);
+        else 
+            write_to_pipe(write_desc, " ");
+        free(user_input);
+    }
 }
 
 
@@ -102,4 +107,37 @@ void read_from_pipe(int pipe_desc, char* read_buf, int read_buf_len)
 {
     int count = read(pipe_desc, read_buf, read_buf_len);
     read_buf[count] = '\0';
+}
+
+
+char* get_dynamic_string(char* ret)
+{
+    char ch = 0;
+    int char_counter = 0;
+    ret = (char*) malloc(sizeof(char));
+    if (ret == NULL)
+        return NULL;
+
+    while ( (ch = getchar()) != '\n' )
+    {
+        if (ch == EOF)
+        {
+            clearerr(stdin);
+            return NULL;
+        }
+
+        ret[ char_counter ] = ch;
+        char_counter += 1;
+
+        ret = (char*) realloc(ret, (char_counter  + 1) * sizeof(char));
+        if (ret == NULL)
+            return NULL;
+    }
+
+    if (char_counter == 0)
+        return NULL;
+
+    ret[ char_counter ] = '\0';
+
+    return ret;
 }
