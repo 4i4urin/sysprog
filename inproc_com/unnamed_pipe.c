@@ -6,23 +6,27 @@
 #define READ  0
 #define WRITE 1
 
-#define BUF_LEN 200
+
+typedef char (*t_getchar_temp)(int pipe_desc);
+
 
 void parent_proc(int write_desc, int read_desc);
 void child_proc(int write_desc, int read_desc);
 
 void write_to_pipe(int pipe_desc, const char* str);
-void read_from_pipe(int pipe_desc, char* read_buf, int read_buf_len);
+void read_from_pipe(int pipe_desc, char** pipe_str);
 
-char* get_dynamic_string(char* ret);
+char* get_dynamic_string(char* ret, t_getchar_temp get_char, int pipe_desc);
+
+char getchar_stdin();
+char getchar_pipe(int pipe_desc);
+
 /*
 The machines rose from the ashes of the nuclear fire. 
 Their war to exterminate mankind has raged for decades, but the final battle would not be fought in the future. 
 It would be fought here, in our present. 
 Tonight.
 */
-
-
 int main(void)
 {
     int pipe_parent_child[2] = { 0 }, pipe_child_parent[2] = { 0 };
@@ -60,19 +64,21 @@ int main(void)
 void parent_proc(int write_desc, int read_desc)
 {
     char* user_input = NULL;
-    char read_buf[BUF_LEN] = { 0 };
+    char* pipe_input = NULL;
     while (1)
     {
         printf("PARENT WRITE: ");
-        user_input = get_dynamic_string(user_input);
-        if (user_input != NULL)
-            write_to_pipe(write_desc, user_input);
-        else 
-            write_to_pipe(write_desc, " ");
-        free(user_input);
+        user_input = get_dynamic_string(user_input, getchar_stdin, 0);
+        if (user_input == NULL)
+        {
+            printf("ERROR: allocate memory\n");
+            exit(100);
+        }
+        write_to_pipe(write_desc, user_input);
 
-        read_from_pipe(read_desc, read_buf, BUF_LEN);
-        printf("PARENT READ: %s\n\n", read_buf);
+        read_from_pipe(read_desc, &pipe_input);
+        printf("PARENT READ: %s\n", pipe_input);
+        free(pipe_input);
     }
 }
 
@@ -80,18 +86,21 @@ void parent_proc(int write_desc, int read_desc)
 void child_proc(int write_desc, int read_desc)
 {
     char* user_input = NULL;
-    char read_buf[BUF_LEN] = { 0 };
+    char* pipe_input = NULL;
     while (1)
     {
-        read_from_pipe(read_desc, read_buf, BUF_LEN);
-        printf("CHILD READ: %s\n\n", read_buf);
-        
+        read_from_pipe(read_desc, &pipe_input);
+        printf("CHILD READ: %s\n", pipe_input);
+        free(pipe_input);
+
         printf("CHILD WRITE: ");
-        user_input = get_dynamic_string(user_input);
-        if (user_input != NULL)
-            write_to_pipe(write_desc, user_input);
-        else 
-            write_to_pipe(write_desc, " ");
+        user_input = get_dynamic_string(user_input, getchar_stdin, 0);
+        if (user_input == NULL)
+        {
+            printf("ERROR: allocate memory\n");
+            exit(100);
+        }
+        write_to_pipe(write_desc, user_input);
         free(user_input);
     }
 }
@@ -103,14 +112,18 @@ void write_to_pipe(int pipe_desc, const char* str)
 }
 
 
-void read_from_pipe(int pipe_desc, char* read_buf, int read_buf_len)
+void read_from_pipe(int pipe_desc, char** pipe_str)
 {
-    int count = read(pipe_desc, read_buf, read_buf_len);
-    read_buf[count] = '\0';
+    *pipe_str = get_dynamic_string(*pipe_str, getchar_pipe, pipe_desc);
+    if (*pipe_str == NULL)
+    {
+        printf("ERROR: allocate memory\n");
+        exit(100);
+    }
 }
 
 
-char* get_dynamic_string(char* ret)
+char* get_dynamic_string(char* ret, t_getchar_temp get_char, int pipe_desc)
 {
     char ch = 0;
     int char_counter = 0;
@@ -118,14 +131,8 @@ char* get_dynamic_string(char* ret)
     if (ret == NULL)
         return NULL;
 
-    while ( (ch = getchar()) != '\n' )
+    while ( (ch = get_char(pipe_desc)) != '\n' )
     {
-        if (ch == EOF)
-        {
-            clearerr(stdin);
-            return NULL;
-        }
-
         ret[ char_counter ] = ch;
         char_counter += 1;
 
@@ -133,11 +140,30 @@ char* get_dynamic_string(char* ret)
         if (ret == NULL)
             return NULL;
     }
+    
+    if (ch == '\n' && char_counter == 0)
+        ret = (char*) realloc(ret, 2 * sizeof(char));
+    else
+        ret = (char*) realloc(ret, (char_counter  + 1) * sizeof(char));
 
-    if (char_counter == 0)
-        return NULL;
-
-    ret[ char_counter ] = '\0';
+    ret[ char_counter ] = '\n';
+    ret[ char_counter + 1] = '\0';
 
     return ret;
 }
+
+
+char getchar_pipe(int pipe_desc)
+{
+    char ch[1] = { 0 };
+    read(pipe_desc, ch, 1);
+    return (char)ch[0];
+}
+
+
+char getchar_stdin()
+{
+    return (char)getchar();
+}
+
+
