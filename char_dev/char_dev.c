@@ -34,11 +34,7 @@ struct file_operations my_fops = {
 
 struct cdev my_dev;
 
-struct echo {
-    char buf[BUF_LEN];
-    int len;
-} echo_str;
-
+char echo[BUF_LEN];
 
 
 int init_module(void)
@@ -54,7 +50,6 @@ int init_module(void)
     if (cdev_add(&my_dev, MKDEV(MY_MAJOR, 0), 1) < 0)
         printk(KERN_WARNING "Can't add device\n");
 
-    echo_str.len = 0;
     printk(KERN_INFO "Start work\n");
     return 0;
 }
@@ -73,20 +68,19 @@ ssize_t my_read(
     struct file* ptr_file, char* user_buff, 
     size_t length, loff_t* offp) 
 {
-    struct echo* echo_str = ptr_file->private_data;
+    char* echo = ((char*)ptr_file->private_data);
     int bytes_read = 0;
 
     printk(KERN_INFO "Try read\n");
 
-    for (size_t i = 0; i < echo_str->len && (echo_str->buf[i] != 0) && i < BUF_LEN; i++)
+    for (int i = 0; i < strlen(echo) && i < BUF_LEN; i++)
     {
-        put_user(echo_str->buf[i], user_buff++);    
+        put_user(echo[i], user_buff++); 
         bytes_read++;
     }
 
-    echo_str->len -= bytes_read;
-    echo_str->buf[echo_str->len] = '\0';
-    
+    echo[strlen(echo) - bytes_read] = '\0';
+
     printk(KERN_INFO "DEV read %d bytes\n", bytes_read);
     
     return bytes_read;
@@ -97,37 +91,36 @@ ssize_t my_write(
     struct file* ptr_file, const char* user_buff, 
     size_t length, loff_t* offp) 
 {
-    struct echo* echo_str = ptr_file->private_data;
+    char* echo = ((char*)ptr_file->private_data);
     int left = 0;
+    int prev_len = strlen(echo);
 
     printk(KERN_INFO "Try write\n");
-    if (echo_str->len == 0)
+    if ( !strlen(echo) )
     {
-        if (length >= BUF_LEN)
+        if (length >= BUF_LEN - 1)
             length = BUF_LEN - 1;
-        left = copy_from_user(echo_str->buf, user_buff, length);
+        left = copy_from_user(echo, user_buff, length);
 
         if ( left )
             printk(KERN_WARNING "WARNING: copy ony part of str\n");
-        echo_str->len = echo_str->len + length - left;
     }
-    else if (echo_str->len < BUF_LEN - 1)
+    else if (strlen(echo) < BUF_LEN - 1)
     {
-        if (length >= BUF_LEN)
-            length = BUF_LEN - 1;
-        left = copy_from_user(echo_str->buf + echo_str->len - 1, user_buff, length);
+        if (length >= (BUF_LEN - strlen(echo)))
+            length = BUF_LEN - strlen(echo);
+        left = copy_from_user(echo + strlen(echo), user_buff, length);
 
         if ( left )
             printk(KERN_WARNING "WARNING: copy ony part of str\n");
-        echo_str->len = echo_str->len - 1 + length - left;
     } else
     {
         printk(KERN_WARNING "WARNING: Devise buff is full\n");
         return length;
     }
 
-    echo_str->buf[echo_str->len] = '\0';
-    printk(KERN_INFO "DEV write %d bytes\n", echo_str->len);
+    echo[prev_len + length - left - 1] = '\0';
+    printk(KERN_INFO "DEV write %ld bytes\n", strlen(echo));
 
     return length;
 }
@@ -135,7 +128,7 @@ ssize_t my_write(
 
 int my_open(struct inode* incode, struct file* ptr_file)
 {
-    ptr_file->private_data = &echo_str;
+    ptr_file->private_data = echo;
 
     printk(KERN_INFO "Open device\n");
     return 0;
@@ -144,21 +137,11 @@ int my_open(struct inode* incode, struct file* ptr_file)
 
 int my_close(struct inode* incode, struct file* ptr_file)
 {
-    struct echo* echo_str = ptr_file->private_data;
+    char* echo = ((char*)ptr_file->private_data);
 
-    printk(KERN_INFO "Close device STORED = %s\n", echo_str->buf);
+    printk(KERN_INFO "Close device STORED = %s\n", echo);
     return 0;
 }
-
-
-
-
-
-
-
-
-
-
 
 
 MODULE_LICENSE("GPL");
