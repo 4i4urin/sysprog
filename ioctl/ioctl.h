@@ -20,13 +20,13 @@ typedef struct _t_chlet
 {
     char find;
     char insert;  
-} t_chlet;
+} t_replet;
 typedef char t_addstr[INSERT_STR_SIZE];
 
 
 #define REVERSE         _IO('i', 1)
 #define SELECT_DELETE   _IOR('o', 2, t_seldel)
-#define CHANGE_LETTER   _IOW('c', 3, t_chlet)
+#define REPLACE         _IOW('c', 3, t_replet)
 #define ADD_STR         _IOWR('t', 4, t_addstr)
 #define ADD_SIZE        _IOC_SIZE(5)
 

@@ -84,9 +84,9 @@ long my_ioctl(
         printk(KERN_INFO "IOCTL: delete received str from buff\n");
         select_delete(buf, arg);
         break;
-    case CHANGE_LETTER:
-        printk(KERN_INFO "IOCTL: change received letter to another in buff\n");
-        change_letter(buf, arg);
+    case REPLACE:
+        printk(KERN_INFO "IOCTL: replace letter to another in buff\n");
+        replace(buf, arg);
         break;
     case ADD_STR:
         printk(KERN_INFO "IOCTL: add string from the beginning\n");
@@ -144,7 +144,6 @@ ssize_t my_write(
 
         if ( left )
             printk(KERN_WARNING "WARNING: copy ony part of str\n");
-
     }
     else if (strlen(buf) < BUF_LEN - 1)
     {
