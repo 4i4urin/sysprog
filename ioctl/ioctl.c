@@ -7,7 +7,6 @@
 #include "ioctl.h"
 #include "buf_operations.h"
 
-#define BUF_LEN 1024
 
 ssize_t my_read(
     struct file* ptr_file, char* user_buff, 
@@ -82,7 +81,7 @@ long my_ioctl(
         break;
     case SELECT_DELETE:
         printk(KERN_INFO "IOCTL: delete received str from buff\n");
-        select_delete(buf, arg);
+        delete(buf, arg);
         break;
     case REPLACE:
         printk(KERN_INFO "IOCTL: replace letter to another in buff\n");

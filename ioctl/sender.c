@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <string.h>
 
 #define USER
 
@@ -16,7 +17,7 @@ void get_replase_vals(t_replet* replet);
 
 int main(void)
 {
-    int char_dev = open("/dev/ioctl_test", O_RDWR);
+    int char_dev = 0;
     unsigned int command;
 
     t_seldel seldel_val;
@@ -27,8 +28,12 @@ int main(void)
 
     while (1)
     {
-        printf("print command 'v', 'd', 'r', 'a', 's', 'q'> ");
+        printf("v - reverse, d - delete\nr - replase, a - add\n"
+               "s - string sizes, q - quit\nprint command > ");
+
         command = get_user_commad();
+
+        char_dev = open("/dev/ioctl_test", O_RDWR);
         switch (command)
         {
         case REVERSE:
@@ -39,7 +44,7 @@ int main(void)
         case SELECT_DELETE:
             printf("Print string to delete > ");
             fgets(seldel_val, sizeof(seldel_val), stdin);
-            clear_stdin();
+            seldel_val[strlen(seldel_val) - 1] = 0;
             iocttl_res = ioctl(char_dev, SELECT_DELETE, &seldel_val);
             puts("Send delete string command");
             break;
@@ -67,15 +72,17 @@ int main(void)
             return 0;
 
         default:
-            puts("Unexpected command");
+            puts("Unexpected command\n");
             continue;
         }
         if (iocttl_res < 0)
-            puts("ERROR: Can't send to device");
+            puts("ERROR: Can't send to device\n");
         else
-            puts("Successful");
+            puts("Successful\n");
+
+        close(char_dev);
     }
-    close(char_dev);
+    
     return 0;
 }
 

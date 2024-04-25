@@ -11,9 +11,11 @@
 #define MY_MAJOR        30
 #define DEVICE_NAME     "ioctl_test"
 
+#define BUF_LEN 1024
 
-#define SEARCH_STR_SIZE     3
-#define INSERT_STR_SIZE     10
+
+#define SEARCH_STR_SIZE     10
+#define INSERT_STR_SIZE     20
 
 typedef char t_seldel[SEARCH_STR_SIZE];
 typedef struct _t_chlet
