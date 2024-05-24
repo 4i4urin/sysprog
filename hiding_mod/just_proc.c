@@ -2,11 +2,11 @@
 #include <unistd.h>
 
 
-int main(int argc, char const *argv[])
+int main(void)
 {
-	printf("%d\n", getpid());
+    printf("%d\n", getpid());
 
-	while (1) { }
+    while (1) { }
 
-	return 0;
+    return 0;
 }

