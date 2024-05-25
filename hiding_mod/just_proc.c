@@ -5,8 +5,10 @@
 int main(void)
 {
     printf("%d\n", getpid());
-
-    while (1) { }
+    double a = 1;
+    while (1) { 
+        a *= 2;
+    }
 
     return 0;
 }
